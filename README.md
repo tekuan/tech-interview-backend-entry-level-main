@@ -216,3 +216,80 @@ bundle exec rspec
 
 ### Como enviar seu projeto
 Salve seu código em um versionador de código (GitHub, GitLab, Bitbucket) e nos envie o link publico. Se achar necessário, informe no README as instruções para execução ou qualquer outra informação relevante para correção/entendimento da sua solução.
+
+
+## Executando a app com o docker
+### Pre-requisitos
+
+- Docker
+- Docker Compose
+
+### Executando a aplicação
+
+Construa as imagens Docker:
+
+```bash
+docker compose build
+```
+
+Inicie todos os serviços:
+
+```bash
+docker compose up -d
+```
+
+Este comando iniciará:
+
+- Aplicação Rails
+- PostgreSQL
+- Redis
+- Sidekiq
+- Test (execução da suíte de testes)
+
+A API estará disponível em:
+
+```
+http://localhost:3000
+```
+
+### Configuração do banco de dados
+
+Execute as migrations:
+
+```bash
+docker compose exec web bundle exec rails db:migrate
+```
+
+Popule o banco de dados com produtos de exemplo:
+
+```bash
+docker compose exec web bundle exec rails db:seed
+```
+
+### Executando os testes
+
+```bash
+docker compose exec web bundle exec rspec
+```
+
+### Executando o RuboCop
+
+```bash
+docker compose exec web bundle exec rubocop
+```
+
+### Sidekiq
+
+O worker do Sidekiq é iniciado automaticamente pelo Docker Compose.
+
+Para verificar se ele está em execução:
+
+```bash
+docker compose logs -f sidekiq
+```
+
+Você também pode acessar o painel do Sidekiq em:
+
+```
+http://localhost:3000/sidekiq
+```
