@@ -6,53 +6,69 @@ class Cart < ApplicationRecord
 
   validates_numericality_of :total_price, greater_than_or_equal_to: 0
 
-
-    scope :inactive, -> {
-    where("updated_at < ?", 3.hours.ago)
+  scope :inactive, lambda {
+    where('last_interaction_at <= ?', 3.hours.ago)
   }
 
-  scope :abandoned, -> {
-    where.not(abandoned_at: nil)
+  scope :abandoned, lambda {
+    where(abandoned: true)
   }
 
-  scope :expired, -> {
-    abandoned.where("abandoned_at < ?", 7.days.ago)
+  scope :expired, lambda {
+    abandoned.where('last_interaction_at <= ?', 7.days.ago)
   }
+
+  def inactive?
+    last_interaction_at.present? &&
+      last_interaction_at <= 3.hours.ago
+  end
+
+  def mark_as_abandoned
+    update!(abandoned: true) if inactive?
+  end
+
+  def remove_if_abandoned
+    destroy! if abandoned? && last_interaction_at <= 7.days.ago
+  end
+
   def add_product(product_id, quantity)
-    product = Product.find(product_id)
+    product = Product.find_by(id: product_id)
 
-    item = cart_items.find_by(product:)
-    if item
-      item.increment!(:quantity, quantity)
+    return false unless product
+
+    cart_item = cart_items.find_by(product:)
+
+    if cart_item
+      cart_item.increment!(:quantity, quantity)
     else
       cart_items.create!(product:, quantity:)
     end
-      touch
-
+    touch(:last_interaction_at)
+    true
   end
 
   def add_item(product_id, quantity)
-    item = cart_items.find_by(product_id:)
+    cart_item = cart_items.find_by(product_id:)
 
-    return false unless item
+    return false unless cart_item
 
-    item.increment!(:quantity, quantity)
-      touch
-
+    cart_item.increment!(:quantity, quantity)
+    touch(:last_interaction_at)
+    true
   end
 
   def total_price
-    cart_items.sum do |item|
-      item.product.price * item.quantity
+    cart_items.sum do |cart_item|
+      cart_item.product.price * cart_item.quantity
     end
   end
 
   def remove_product(product_id)
-    item = cart_items.find_by(product_id:)
+    cart_item = cart_items.find_by(product_id:)
 
-    return false unless item
+    return false unless cart_item
 
-    item.destroy!
-      touch
+    cart_item.destroy!
+    touch(:last_interaction_at)
   end
 end
